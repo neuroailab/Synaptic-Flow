@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Checking formatting"
+echo "Checking code style"
 echo ">>>>>>>>>>>>>>>>>>>>>>>"
 
 format_occurred=false

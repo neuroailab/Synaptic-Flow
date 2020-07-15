@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+
 class Pruner:
     def __init__(self, masked_parameters):
         self.masked_parameters = list(masked_parameters)
@@ -17,11 +18,11 @@ class Pruner:
         if not k < 1:
             threshold, _ = torch.kthvalue(global_scores, k)
             for mask, param in self.masked_parameters:
-                score = self.scores[id(param)] 
-                zero = torch.tensor([0.]).to(mask.device)
-                one = torch.tensor([1.]).to(mask.device)
+                score = self.scores[id(param)]
+                zero = torch.tensor([0.0]).to(mask.device)
+                one = torch.tensor([1.0]).to(mask.device)
                 mask.copy_(torch.where(score <= threshold, zero, one))
-    
+
     def _local_mask(self, sparsity):
         r"""Updates masks of model with scores by sparsity level parameter-wise.
         """
@@ -30,16 +31,16 @@ class Pruner:
             k = int((1.0 - sparsity) * score.numel())
             if not k < 1:
                 threshold, _ = torch.kthvalue(torch.flatten(score), k)
-                zero = torch.tensor([0.]).to(mask.device)
-                one = torch.tensor([1.]).to(mask.device)
+                zero = torch.tensor([0.0]).to(mask.device)
+                one = torch.tensor([1.0]).to(mask.device)
                 mask.copy_(torch.where(score <= threshold, zero, one))
 
     def mask(self, sparsity, scope):
         r"""Updates masks of model with scores by sparsity according to scope.
         """
-        if scope == 'global':
+        if scope == "global":
             self._global_mask(sparsity)
-        if scope == 'local':
+        if scope == "local":
             self._local_mask(sparsity)
 
     @torch.no_grad()
@@ -58,10 +59,10 @@ class Pruner:
     def stats(self):
         r"""Returns remaining and total number of prunable parameters.
         """
-        remaining_params, total_params = 0, 0 
+        remaining_params, total_params = 0, 0
         for mask, _ in self.masked_parameters:
-             remaining_params += mask.detach().cpu().numpy().sum()
-             total_params += mask.numel()
+            remaining_params += mask.detach().cpu().numpy().sum()
+            total_params += mask.numel()
         return remaining_params, total_params
 
 
@@ -77,7 +78,7 @@ class Rand(Pruner):
 class Mag(Pruner):
     def __init__(self, masked_parameters):
         super(Mag, self).__init__(masked_parameters)
-    
+
     def score(self, model, loss, dataloader, device):
         for _, p in self.masked_parameters:
             self.scores[id(p)] = torch.clone(p.data).detach().abs_()
@@ -124,7 +125,9 @@ class GraSP(Pruner):
             output = model(data) / self.temp
             L = loss(output, target)
 
-            grads = torch.autograd.grad(L, [p for (_, p) in self.masked_parameters], create_graph=False)
+            grads = torch.autograd.grad(
+                L, [p for (_, p) in self.masked_parameters], create_graph=False
+            )
             flatten_grads = torch.cat([g.reshape(-1) for g in grads if g is not None])
             stopped_grads += flatten_grads
 
@@ -134,12 +137,14 @@ class GraSP(Pruner):
             output = model(data) / self.temp
             L = loss(output, target)
 
-            grads = torch.autograd.grad(L, [p for (_, p) in self.masked_parameters], create_graph=True)
+            grads = torch.autograd.grad(
+                L, [p for (_, p) in self.masked_parameters], create_graph=True
+            )
             flatten_grads = torch.cat([g.reshape(-1) for g in grads if g is not None])
-            
+
             gnorm = (stopped_grads * flatten_grads).sum()
             gnorm.backward()
-        
+
         # calculate score -Hg * theta
         for _, p in self.masked_parameters:
             self.scores[id(p)] = torch.clone(-p.grad * p.data).detach()
@@ -157,7 +162,6 @@ class SynFlow(Pruner):
         super(SynFlow, self).__init__(masked_parameters)
 
     def score(self, model, loss, dataloader, device):
-      
         @torch.no_grad()
         def linearize(model):
             signs = {}
@@ -170,18 +174,17 @@ class SynFlow(Pruner):
         def nonlinearize(model, signs):
             for name, param in model.state_dict().items():
                 param.mul_(signs[name])
-        
+
         signs = linearize(model)
 
         (data, _) = next(iter(dataloader))
-        input_dim = list(data[0,:].shape)
+        input_dim = list(data[0, :].shape)
         input = torch.ones([1] + input_dim).to(device)
         output = model(input)
         torch.sum(output).backward()
-        
+
         for _, p in self.masked_parameters:
             self.scores[id(p)] = torch.clone(p.grad * p).detach().abs_()
             p.grad.data.zero_()
 
         nonlinearize(model, signs)
-

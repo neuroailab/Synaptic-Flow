@@ -8,6 +8,7 @@ from Utils import generator
 from train import *
 from prune import *
 
+
 def run(args):
     if not args.save:
         print("This experiment requires an expid.")
@@ -18,16 +19,20 @@ def run(args):
     device = load.device(args.gpu)
 
     ## Data ##
-    input_shape, num_classes = load.dimension(args.dataset) 
-    data_loader = load.dataloader(args.dataset, args.prune_batch_size, True, args.workers, args.prune_dataset_ratio * num_classes)
+    input_shape, num_classes = load.dimension(args.dataset)
+    data_loader = load.dataloader(
+        args.dataset,
+        args.prune_batch_size,
+        True,
+        args.workers,
+        args.prune_dataset_ratio * num_classes,
+    )
 
     ## Model, Loss, Optimizer ##
-    model = load.model(args.model, args.model_class)(input_shape, 
-                                                     num_classes, 
-                                                     args.dense_classifier, 
-                                                     args.pretrained).to(device)
+    model = load.model(args.model, args.model_class)(
+        input_shape, num_classes, args.dense_classifier, args.pretrained
+    ).to(device)
     loss = nn.CrossEntropyLoss()
-
 
     ## Compute per Neuron Score ##
     def unit_score_sum(model, scores):
@@ -47,14 +52,14 @@ def run(args):
             if isinstance(module, layers.Conv2d):
                 W = module.weight
                 W_score = scores[id(W)].detach().cpu().numpy()
-                in_score = W_score.sum(axis=(1,2,3)) 
-                out_score = W_score.sum(axis=(0,2,3))
+                in_score = W_score.sum(axis=(1, 2, 3))
+                out_score = W_score.sum(axis=(0, 2, 3))
 
                 if module.bias is not None:
                     b = module.bias
                     b_score = scores[id(b)].detach().cpu().numpy()
                     in_score += b_score
-                
+
                 in_scores.append(in_score)
                 out_scores.append(out_score)
 
@@ -65,10 +70,24 @@ def run(args):
     ## Loop through Pruners and Save Data ##
     unit_scores = []
     for i, p in enumerate(args.pruner_list):
-        pruner = load.pruner(p)(generator.masked_parameters(model, args.prune_bias, args.prune_batchnorm, args.prune_residual))
-        sparsity = 10**(-float(args.compression))
-        prune_loop(model, loss, pruner, prune_loader, device, sparsity, 
-                   args.compression_schedule, args.mask_scope, args.prune_epochs, args.reinitialize)
+        pruner = load.pruner(p)(
+            generator.masked_parameters(
+                model, args.prune_bias, args.prune_batchnorm, args.prune_residual
+            )
+        )
+        sparsity = 10 ** (-float(args.compression))
+        prune_loop(
+            model,
+            loss,
+            pruner,
+            prune_loader,
+            device,
+            sparsity,
+            args.compression_schedule,
+            args.mask_scope,
+            args.prune_epochs,
+            args.reinitialize,
+        )
         unit_score = unit_score_sum(model, pruner.scores)
         unit_scores.append(unit_score)
-        np.save('{}/{}'.format(args.result_dir, p), unit_score)
+        np.save("{}/{}".format(args.result_dir, p), unit_score)

@@ -4,6 +4,7 @@ import os
 from Experiments import example
 from Experiments import singleshot
 from Experiments import multishot
+from Experiments import tk_checkpoints
 from Experiments.theory import unit_conservation
 from Experiments.theory import layer_conservation
 from Experiments.theory import imp_conservation
@@ -50,7 +51,7 @@ if __name__ == '__main__':
                         help='weight decay (default: 0.0)')
     # Pruning Hyperparameters
     pruning_args = parser.add_argument_group('pruning')
-    pruning_args.add_argument('--pruner', type=str, default='rand', 
+    pruning_args.add_argument('--pruner', type=str, default='rand',
                         choices=['rand','mag','snip','grasp','synflow'],
                         help='prune strategy (default: rand)')
     pruning_args.add_argument('--compression', type=float, default=1.0,
@@ -81,10 +82,14 @@ if __name__ == '__main__':
                         help='list of compression ratio exponents for singleshot/multishot (default: [])')
     pruning_args.add_argument('--level-list', type=int, nargs='*', default=[],
                         help='list of number of prune-train cycles (levels) for multishot (default: [])')
+    # Checkpointing parameters
+    pruning_args = parser.add_argument_group('checkpointing')
+    pruning_args.add_argument('--save-freq', type=int, default=100,
+                        help='Frequency (in batches) to save model checkpoints at')
     ## Experiment Hyperparameters ##
-    parser.add_argument('--experiment', type=str, default='example', 
+    parser.add_argument('--experiment', type=str, default='example',
                         choices=['example','singleshot','multishot','unit-conservation',
-                        'layer-conservation','imp-conservation','schedule-conservation'],
+                        'layer-conservation','imp-conservation','schedule-conservation', 'tk'],
                         help='experiment name (default: example)')
     parser.add_argument('--expid', type=str, default='',
                         help='name used to save results (default: "")')
@@ -111,6 +116,7 @@ if __name__ == '__main__':
         result_dir = '{}/{}/{}'.format(args.result_dir, args.experiment, args.expid)
         setattr(args, 'save', True)
         setattr(args, 'result_dir', result_dir)
+        setattr(args, 'save_path', f'{args.result_dir}/{args.experiment}/ckpt/{args.expid}')
         try:
             os.makedirs(result_dir)
         except FileExistsError:
@@ -140,4 +146,5 @@ if __name__ == '__main__':
         imp_conservation.run(args)
     if args.experiment == 'schedule-conservation':
         schedule_conservation.run(args)
-
+    if args.experiment == 'tk':
+        tk_checkpoints.run(args)

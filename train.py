@@ -4,6 +4,20 @@ import numpy as np
 from tqdm import tqdm
 
 
+def checkpoint(model, optimizer, epoch, curr_step, save_path, eval_dict={}):
+    print(f"Saving model checkpoint for step {curr_step}")
+    save_dict = {
+        "epoch": epoch,
+        "step": curr_step,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+    }
+    save_dict.update(eval_dict)
+    torch.save(
+        save_dict, f"{save_path}_ckpt_step{curr_step}.tar",
+    )
+
+
 def train(
     model,
     loss,
@@ -14,6 +28,7 @@ def train(
     verbose,
     log_interval=10,
     save_freq=100,
+    save_steps=None,
     save_path=None,
 ):
     model.train()
@@ -41,17 +56,15 @@ def train(
         #       it might make more sense to checkpoint only on epoch: makes
         #       for a cleaner codebase and can include test metrics
         # TODO: additionally, could integrate tfutils.DBInterface here
-        if save_path is not None and curr_step % save_freq == 0:
-            print("Saving model checkpoint")
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "train_loss": train_loss.item(),
-                },
-                f"{save_path}_ckpt_step{curr_step}.tar",
-            )
+        eval_dict = {"train_loss": train_loss.item()}
+        if save_path is not None and save_freq is not None:
+            if curr_step % save_freq == 0:
+                checkpoint(model, optimizer, epoch, curr_step, save_path)
+        if save_path is not None and save_steps is not None:
+            if len(save_steps) > 0 and curr_step == save_steps[0]:
+                save_steps.pop(0)
+                checkpoint(model, optimizer, epoch, curr_step, save_path, eval_dict)
+
     return total / len(dataloader.dataset)
 
 
@@ -92,8 +105,10 @@ def train_eval_loop(
     epochs,
     verbose,
     save_freq=100,
+    save_steps=None,
     save_path=None,
 ):
+    save_steps = [5, 10, 50, 100, 500]
     test_loss, accuracy1, accuracy5 = eval(model, loss, test_loader, device, verbose)
     rows = [[np.nan, test_loss, accuracy1, accuracy5]]
     for epoch in tqdm(range(epochs)):
@@ -105,12 +120,23 @@ def train_eval_loop(
             device,
             epoch,
             verbose,
-            save_freq=save_freq,
+            save_freq=None,
+            save_steps=save_steps,
             save_path=save_path,
         )
+        print("Save steps after train call")
+        print(save_steps)
         test_loss, accuracy1, accuracy5 = eval(
             model, loss, test_loader, device, verbose
         )
+        eval_dict = {
+            "train_loss": train_loss,
+            "test_loss": test_loss,
+            "accuracy1": accuracy1,
+            "accuracy5": accuracy5,
+        }
+        curr_step = (epoch + 1) * len(train_loader)
+        checkpoint(model, optimizer, epoch, curr_step, save_path, eval_dict)
         row = [train_loss, test_loss, accuracy1, accuracy5]
         scheduler.step()
         rows.append(row)

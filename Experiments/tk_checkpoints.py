@@ -110,35 +110,38 @@ def run(args):
         post_result.tail(1),
     ]
     train_result = pd.concat(frames, keys=["Init.", "Pre-Prune", "Post-Prune", "Final"])
-    prune_result = metrics.summary(
-        model,
-        pruner.scores,
-        metrics.flop(model, input_shape, device),
-        lambda p: generator.prunable(p, args.prune_batchnorm, args.prune_residual),
-    )
-    total_params = int((prune_result["sparsity"] * prune_result["size"]).sum())
-    possible_params = prune_result["size"].sum()
-    total_flops = int((prune_result["sparsity"] * prune_result["flops"]).sum())
-    possible_flops = prune_result["flops"].sum()
     print("Train results:\n", train_result)
-    print("Prune results:\n", prune_result)
-    print(
-        "Parameter Sparsity: {}/{} ({:.4f})".format(
-            total_params, possible_params, total_params / possible_params
+    if args.prune_epochs > 0:
+        prune_result = metrics.summary(
+            model,
+            pruner.scores,
+            metrics.flop(model, input_shape, device),
+            lambda p: generator.prunable(p, args.prune_batchnorm, args.prune_residual),
         )
-    )
-    print(
-        "FLOP Sparsity: {}/{} ({:.4f})".format(
-            total_flops, possible_flops, total_flops / possible_flops
+        total_params = int((prune_result["sparsity"] * prune_result["size"]).sum())
+        possible_params = prune_result["size"].sum()
+        total_flops = int((prune_result["sparsity"] * prune_result["flops"]).sum())
+        possible_flops = prune_result["flops"].sum()
+
+        print("Prune results:\n", prune_result)
+        print(
+            "Parameter Sparsity: {}/{} ({:.4f})".format(
+                total_params, possible_params, total_params / possible_params
+            )
         )
-    )
+        print(
+            "FLOP Sparsity: {}/{} ({:.4f})".format(
+                total_flops, possible_flops, total_flops / possible_flops
+            )
+        )
 
     ## Save Results and Model ##
     if args.save:
         print("Saving results.")
         pre_result.to_pickle("{}/pre-train.pkl".format(args.result_dir))
         post_result.to_pickle("{}/post-train.pkl".format(args.result_dir))
-        prune_result.to_pickle("{}/compression.pkl".format(args.result_dir))
         torch.save(model.state_dict(), "{}/model.pt".format(args.result_dir))
         torch.save(optimizer.state_dict(), "{}/optimizer.pt".format(args.result_dir))
-        torch.save(pruner.state_dict(), "{}/pruner.pt".format(args.result_dir))
+        if args.prune_epochs > 0:
+            prune_result.to_pickle("{}/compression.pkl".format(args.result_dir))
+            torch.save(pruner.state_dict(), "{}/pruner.pt".format(args.result_dir))

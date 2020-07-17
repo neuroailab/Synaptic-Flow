@@ -42,7 +42,7 @@ def get_transform(size, padding, mean, std, preprocess):
     return transforms.Compose(transform)
 
 
-def dataloader(dataset, batch_size, train, workers, length=None):
+def dataloader(dataset, batch_size, train, workers, length=None, datadir="Data"):
     # Dataset
     if dataset == "mnist":
         mean, std = (0.1307,), (0.3081,)
@@ -50,7 +50,7 @@ def dataloader(dataset, batch_size, train, workers, length=None):
             size=28, padding=0, mean=mean, std=std, preprocess=False
         )
         dataset = datasets.MNIST(
-            "Data", train=train, download=True, transform=transform
+            datadir, train=train, download=True, transform=transform
         )
     if dataset == "cifar10":
         mean, std = (0.491, 0.482, 0.447), (0.247, 0.243, 0.262)
@@ -58,7 +58,7 @@ def dataloader(dataset, batch_size, train, workers, length=None):
             size=32, padding=4, mean=mean, std=std, preprocess=train
         )
         dataset = datasets.CIFAR10(
-            "Data", train=train, download=True, transform=transform
+            datadir, train=train, download=True, transform=transform
         )
     if dataset == "cifar100":
         mean, std = (0.507, 0.487, 0.441), (0.267, 0.256, 0.276)
@@ -66,7 +66,7 @@ def dataloader(dataset, batch_size, train, workers, length=None):
             size=32, padding=4, mean=mean, std=std, preprocess=train
         )
         dataset = datasets.CIFAR100(
-            "Data", train=train, download=True, transform=transform
+            datadir, train=train, download=True, transform=transform
         )
     if dataset == "tiny-imagenet":
         mean, std = (0.480, 0.448, 0.397), (0.276, 0.269, 0.282)
@@ -74,7 +74,7 @@ def dataloader(dataset, batch_size, train, workers, length=None):
             size=64, padding=4, mean=mean, std=std, preprocess=train
         )
         dataset = custom_datasets.TINYIMAGENET(
-            "Data", train=train, download=True, transform=transform
+            datadir, train=train, download=True, transform=transform
         )
     if dataset == "imagenet":
         mean, std = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
@@ -98,7 +98,7 @@ def dataloader(dataset, batch_size, train, workers, length=None):
                     transforms.Normalize(mean, std),
                 ]
             )
-        folder = "Data/imagenet_raw/{}".format("train" if train else "val")
+        folder = f"{datadir}/imagenet_raw/{'train' if train else 'val'}"
         dataset = datasets.ImageFolder(folder, transform=transform)
 
     # Dataloader

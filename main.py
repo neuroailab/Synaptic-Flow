@@ -23,6 +23,12 @@ if __name__ == "__main__":
         help="dataset (default: mnist)",
     )
     training_args.add_argument(
+        "--data-dir",
+        type=str,
+        default="Data",
+        help="Where to store the datasets to be downloaded",
+    )
+    training_args.add_argument(
         "--model",
         type=str,
         default="fc",

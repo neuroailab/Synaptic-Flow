@@ -17,18 +17,28 @@ def run(args):
     ## Data ##
     print("Loading {} dataset.".format(args.dataset))
     input_shape, num_classes = load.dimension(args.dataset)
+    dataset, batch_size, train, workers, length = None, datadir
     prune_loader = load.dataloader(
-        args.dataset,
-        args.prune_batch_size,
-        True,
-        args.workers,
-        args.prune_dataset_ratio * num_classes,
+        dataset=args.dataset,
+        batch_size=args.prune_batch_size,
+        train=True,
+        workers=args.workers,
+        length=args.prune_dataset_ratio * num_classes,
+        datadir=args.data_dir,
     )
     train_loader = load.dataloader(
-        args.dataset, args.train_batch_size, True, args.workers
+        dataset=args.dataset,
+        batch_size=args.train_batch_size,
+        train=True,
+        workers=args.workers,
+        datadir=args.data_dir,
     )
     test_loader = load.dataloader(
-        args.dataset, args.test_batch_size, False, args.workers
+        dataset=args.dataset,
+        batch_size=args.test_batch_size,
+        train=False,
+        workers=args.workers,
+        datadir=args.data_dir,
     )
 
     ## Model, Loss, Optimizer ##

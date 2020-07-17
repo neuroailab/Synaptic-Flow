@@ -17,7 +17,6 @@ def run(args):
     ## Data ##
     print("Loading {} dataset.".format(args.dataset))
     input_shape, num_classes = load.dimension(args.dataset)
-    dataset, batch_size, train, workers, length = None, datadir
     prune_loader = load.dataloader(
         dataset=args.dataset,
         batch_size=args.prune_batch_size,

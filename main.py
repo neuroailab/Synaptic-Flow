@@ -298,9 +298,11 @@ if __name__ == "__main__":
         result_dir = f"{args.result_dir}/{args.experiment}/{args.expid}"
         setattr(args, "save", True)
         setattr(args, "result_dir", result_dir)
-        setattr(args, "save_path", f"{args.result_dir}/ckpt/{args.expid}")
+        save_path = f"{args.result_dir}/ckpt"
+        setattr(args, "save_path", f"{save_path}/{args.expid}")
         try:
-            os.makedirs(result_dir)
+            # TODO: this is not fully quite right yet
+            os.makedirs(save_path)
         except FileExistsError:
             val = ""
             while val not in ["yes", "no"]:

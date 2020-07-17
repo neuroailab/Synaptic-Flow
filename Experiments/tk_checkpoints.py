@@ -5,7 +5,6 @@ import torch.nn as nn
 from Utils import load
 from Utils import generator
 from Utils import metrics
-from Utils import save_steps_file
 from train import *
 from prune import *
 
@@ -52,7 +51,7 @@ def run(args):
     ## checkpointing setup ##
     if args.tk_steps_file is not None:
         save_steps = load.save_steps_file(args.tk_steps_file)
-        steps_per_epoch = int(len(train_loader) / args.train_batch_size)
+        steps_per_epoch = len(train_loader)
         max_epochs = int(save_steps[-1] / steps_per_epoch)
         print(f"Overriding train epochs to last step in file ")
         print(f"    pre_epochs set to 0, post_epochs set to {max_epochs}")

@@ -34,8 +34,8 @@ def train(
     model.train()
     total = 0
     for batch_idx, (data, target) in enumerate(dataloader):
-        curr_step = epoch * len(dataloader) + batch_idx
         data, target = data.to(device), target.to(device)
+        curr_step = epoch * len(dataloader) + batch_idx
         optimizer.zero_grad()
         output = model(data)
         train_loss = loss(output, target)
@@ -44,12 +44,13 @@ def train(
         optimizer.step()
         if verbose & (batch_idx % log_interval == 0):
             print(
-                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} \t Step: {}".format(
                     epoch,
                     batch_idx * len(data),
                     len(dataloader.dataset),
                     100.0 * batch_idx / len(dataloader),
                     train_loss.item(),
+                    curr_step,
                 )
             )
         # TODO: this is just to be able to save at any step (even mid-epoch)

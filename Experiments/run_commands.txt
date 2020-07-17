@@ -4,4 +4,4 @@ python main.py --dataset=mnist --model=fc --optimizer=sgd --prune-epochs=0 --exp
 
 python main.py --dataset=mnist --model=fc --optimizer=sgd --prune-epochs=0 --experiment=tk --expid=mnist_fc_test_2 --verbose
 
-python main.py --dataset=mnist --model=fc --optimizer=sgd --prune-epochs=0 --experiment=tk --expid=mnist_fc_test_3 --verbose --tk-steps-file=
+python main.py --dataset=mnist --model=fc --optimizer=sgd --prune-epochs=0 --experiment=tk --expid=mnist_fc_test_3 --verbose --tk-steps-file=steps.txt

@@ -233,12 +233,18 @@ if __name__ == "__main__":
         help="list of number of prune-train cycles (levels) for multishot (default: [])",
     )
     # Checkpointing parameters
-    pruning_args = parser.add_argument_group("checkpointing")
-    pruning_args.add_argument(
+    ckpt_args = parser.add_argument_group("checkpointing")
+    ckpt_args.add_argument(
         "--save-freq",
         type=int,
         default=100,
         help="Frequency (in batches) to save model checkpoints at",
+    )
+    ckpt_args.add_argument(
+        "--tk-steps-file",
+        type=str,
+        default=None,
+        help="File to read the checkpointins steps from. Will override step_freq",
     )
     ## Experiment Hyperparameters ##
     parser.add_argument(
@@ -289,21 +295,18 @@ if __name__ == "__main__":
         print("WARNING: this experiment is not being saved.")
         setattr(args, "save", False)
     else:
-        result_dir = "{}/{}/{}".format(args.result_dir, args.experiment, args.expid)
+        result_dir = f"{args.result_dir}/{args.experiment}/{args.expid}"
         setattr(args, "save", True)
         setattr(args, "result_dir", result_dir)
-        setattr(
-            args, "save_path", f"{args.result_dir}/{args.experiment}/ckpt/{args.expid}"
-        )
+        setattr(args, "save_path", f"{args.result_dir}/ckpt/{args.expid}")
         try:
             os.makedirs(result_dir)
         except FileExistsError:
             val = ""
             while val not in ["yes", "no"]:
                 val = input(
-                    "Experiment '{}' with expid '{}' exists.  Overwrite (yes/no)? ".format(
-                        args.experiment, args.expid
-                    )
+                    f"Experiment '{args.experiment}' with expid '{args.expid}' "
+                    "exists.  Overwrite (yes/no)? "
                 )
             if val == "no":
                 quit()

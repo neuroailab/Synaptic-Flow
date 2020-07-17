@@ -210,3 +210,11 @@ def optimizer(optimizer):
         "rms": (optim.RMSprop, {}),
     }
     return optimizers[optimizer]
+
+
+def save_steps_file(path):
+    save_steps = []
+    with open(path, "rb") as f:
+        for line in f:
+            save_steps.append(int(line))
+    return save_steps

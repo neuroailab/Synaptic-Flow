@@ -5,6 +5,7 @@ import torch.nn as nn
 from Utils import load
 from Utils import generator
 from Utils import metrics
+from Utils import save_steps_file
 from train import *
 from prune import *
 
@@ -42,11 +43,23 @@ def run(args):
         generator.parameters(model),
         lr=args.lr,
         weight_decay=args.weight_decay,
-        **opt_kwargs
+        **opt_kwargs,
     )
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=args.lr_drops, gamma=args.lr_drop_rate
     )
+
+    ## checkpointing setup ##
+    if args.tk_steps_file is not None:
+        save_steps = load.save_steps_file(args.tk_steps_file)
+        steps_per_epoch = int(len(train_loader) / args.train_batch_size)
+        max_epochs = int(save_steps[-1] / steps_per_epoch)
+        print(f"Overriding train epochs to last step in file ")
+        print(f"    pre_epochs set to 0, post_epochs set to {max_epochs}")
+        setattr(args, "pre_epochs", 0)
+        setattr(args, "post_epochs", max_epochs)
+    else:
+        save_steps = None
 
     ## Pre-Train ##
     print("Pre-Train for {} epochs.".format(args.pre_epochs))
@@ -60,6 +73,7 @@ def run(args):
         device,
         args.pre_epochs,
         args.verbose,
+        save_steps=save_steps,
         save_freq=args.save_freq,
         save_path=args.save_path,
     )
@@ -98,6 +112,7 @@ def run(args):
         device,
         args.post_epochs,
         args.verbose,
+        save_steps=save_steps,
         save_freq=args.save_freq,
         save_path=args.save_path,
     )

@@ -108,7 +108,6 @@ def train_eval_loop(
     save_steps=None,
     save_path=None,
 ):
-    save_steps = [5, 10, 50, 100, 500]
     test_loss, accuracy1, accuracy5 = eval(model, loss, test_loader, device, verbose)
     rows = [[np.nan, test_loss, accuracy1, accuracy5]]
     for epoch in tqdm(range(epochs)):

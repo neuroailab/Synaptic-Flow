@@ -4,24 +4,29 @@ import numpy as np
 from tqdm import tqdm
 
 
-def checkpoint(model, optimizer, epoch, curr_step, save_path, eval_dict={}):
+def checkpoint(
+    model, optimizer, scheduler, epoch, curr_step, save_path, metric_dict={}
+):
     print(f"Saving model checkpoint for step {curr_step}")
     save_dict = {
         "epoch": epoch,
         "step": curr_step,
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": scheduler.state_dict(),
     }
-    save_dict.update(eval_dict)
+    save_dict.update(metric_dict)
     torch.save(
         save_dict, f"{save_path}_ckpt_step{curr_step}.tar",
     )
 
 
+# TODO: we maybe don't want to have the scheduler inside the train function
 def train(
     model,
     loss,
     optimizer,
+    scheduler,
     dataloader,
     device,
     epoch,
@@ -60,11 +65,13 @@ def train(
         eval_dict = {"train_loss": train_loss.item()}
         if save_path is not None and save_freq is not None:
             if curr_step % save_freq == 0:
-                checkpoint(model, optimizer, epoch, curr_step, save_path)
+                checkpoint(model, optimizer, scheduler, epoch, curr_step, save_path)
         if save_path is not None and save_steps is not None:
             if len(save_steps) > 0 and curr_step == save_steps[0]:
                 save_steps.pop(0)
-                checkpoint(model, optimizer, epoch, curr_step, save_path, eval_dict)
+                checkpoint(
+                    model, optimizer, scheduler, epoch, curr_step, save_path, eval_dict
+                )
 
     return total / len(dataloader.dataset)
 
@@ -110,12 +117,20 @@ def train_eval_loop(
     save_path=None,
 ):
     test_loss, accuracy1, accuracy5 = eval(model, loss, test_loader, device, verbose)
+    metric_dict = {
+        "train_loss": 0,
+        "test_loss": test_loss,
+        "accuracy1": accuracy1,
+        "accuracy5": accuracy5,
+    }
+    checkpoint(model, optimizer, scheduler, epoch, 0, save_path, metric_dict)
     rows = [[np.nan, test_loss, accuracy1, accuracy5]]
     for epoch in tqdm(range(epochs)):
         train_loss = train(
             model,
             loss,
             optimizer,
+            scheduler,
             train_loader,
             device,
             epoch,
@@ -129,14 +144,16 @@ def train_eval_loop(
         test_loss, accuracy1, accuracy5 = eval(
             model, loss, test_loader, device, verbose
         )
-        eval_dict = {
+        metric_dict = {
             "train_loss": train_loss,
             "test_loss": test_loss,
             "accuracy1": accuracy1,
             "accuracy5": accuracy5,
         }
         curr_step = (epoch + 1) * len(train_loader)
-        checkpoint(model, optimizer, epoch, curr_step, save_path, eval_dict)
+        checkpoint(
+            model, optimizer, scheduler, epoch, curr_step, save_path, metric_dict
+        )
         row = [train_loss, test_loss, accuracy1, accuracy5]
         scheduler.step()
         rows.append(row)

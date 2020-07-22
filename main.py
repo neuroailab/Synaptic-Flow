@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import shutil
 from Experiments import example
 from Experiments import singleshot
 from Experiments import multishot
@@ -307,7 +308,6 @@ if __name__ == "__main__":
         save_path = f"{args.result_dir}/ckpt"
         setattr(args, "save_path", f"{save_path}/{args.expid}")
         try:
-            # TODO: this is not fully quite right yet
             os.makedirs(save_path)
         except FileExistsError:
             val = ""
@@ -318,6 +318,9 @@ if __name__ == "__main__":
                 )
             if val == "no":
                 quit()
+            else:
+                shutil.rmtree(result_dir)
+                os.makedirs(save_path)
 
     ## Save Args ##
     if args.save:

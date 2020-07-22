@@ -123,7 +123,7 @@ def train_eval_loop(
         "accuracy1": accuracy1,
         "accuracy5": accuracy5,
     }
-    checkpoint(model, optimizer, scheduler, epoch, 0, save_path, metric_dict)
+    checkpoint(model, optimizer, scheduler, 0, 0, save_path, metric_dict)
     rows = [[np.nan, test_loss, accuracy1, accuracy5]]
     for epoch in tqdm(range(epochs)):
         train_loss = train(

@@ -139,8 +139,6 @@ def train_eval_loop(
             save_steps=save_steps,
             save_path=save_path,
         )
-        print("Save steps after train call")
-        print(save_steps)
         test_loss, accuracy1, accuracy5 = eval(
             model, loss, test_loader, device, verbose
         )

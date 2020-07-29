@@ -91,6 +91,13 @@ if __name__ == "__main__":
         help="load pretrained weights (default: False)",
     )
     training_args.add_argument(
+        "--norm_layer",
+        type=str,
+        default="default",
+        choices=["default", "id", "bn1d", "bn2d"],
+        help="Which type of normalization to use in between model layers",
+    )
+    training_args.add_argument(
         "--optimizer",
         type=str,
         default="adam",

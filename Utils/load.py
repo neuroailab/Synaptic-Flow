@@ -191,6 +191,15 @@ def model(model_architecture, model_class):
     return models[model_class][model_architecture]
 
 
+def norm_layer(norm_name):
+    norm_layers = {
+        "bn2d": torch.nn.BatchNorm2d,
+        "bn1d": torch.nn.BatchNorm1d,
+        "id": torch.nn.Identity,
+    }
+    return norm_layers.get(norm_name, None)
+
+
 def pruner(method):
     prune_methods = {
         "rand": pruners.Rand,

@@ -13,6 +13,7 @@ def fc(
     L=6,
     N=100,
     nonlinearity=nn.ReLU(),
+    norm_layer=None,
 ):
     size = np.prod(input_shape)
 
@@ -20,9 +21,13 @@ def fc(
     modules = [nn.Flatten()]
     modules.append(layers.Linear(size, N))
     modules.append(nonlinearity)
+    if norm_layer is not None:
+        modules.append(norm_layer(N))
     for i in range(L - 2):
         modules.append(layers.Linear(N, N))
         modules.append(nonlinearity)
+        if norm_layer is not None:
+            modules.append(norm_layer(N))
 
     # Linear classifier
     if dense_classifier:
@@ -53,9 +58,13 @@ def conv(
     modules = []
     modules.append(layers.Conv2d(channels, N, kernel_size=3, padding=3 // 2))
     modules.append(nonlinearity)
+    if norm_layer is not None:
+        modules.append(norm_layer(N))
     for i in range(L - 2):
         modules.append(layers.Conv2d(N, N, kernel_size=3, padding=3 // 2))
         modules.append(nonlinearity)
+        if norm_layer is not None:
+            modules.append(norm_layer(N))
 
     # Linear classifier
     modules.append(nn.Flatten())

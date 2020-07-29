@@ -42,8 +42,14 @@ def run(args):
 
     ## Model, Loss, Optimizer ##
     print("Creating {}-{} model.".format(args.model_class, args.model))
+    norm_layer = load.norm_layer(args.norm_layer)
+    print(f"Applying {args.norm_layer} normalization: {norm_layer}")
     model = load.model(args.model, args.model_class)(
-        input_shape, num_classes, args.dense_classifier, args.pretrained
+        input_shape=input_shape,
+        num_classes=num_classes,
+        dense_classifier=args.dense_classifier,
+        pretrained=args.pretrained,
+        norm_layer=norm_layer,
     ).to(device)
     loss = nn.CrossEntropyLoss()
     opt_class, opt_kwargs = load.optimizer(args.optimizer)

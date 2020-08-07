@@ -95,7 +95,7 @@ if __name__ == "__main__":
         type=str,
         default="default",
         choices=["default", "id", "bn1d", "bn2d"],
-        help="Which type of normalization to use in between model layers",
+        help="Which type of normalization to use in between fc model layers",
     )
     training_args.add_argument(
         "--optimizer",

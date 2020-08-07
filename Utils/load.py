@@ -162,6 +162,16 @@ def model(model_architecture, model_class):
         "wide-resnet50": tinyimagenet_resnet.wide_resnet50,
         "wide-resnet101": tinyimagenet_resnet.wide_resnet101,
         "wide-resnet152": tinyimagenet_resnet.wide_resnet152,
+        "resnet18-nobn": tinyimagenet_resnet.resnet18_nobn,
+        "resnet34-nobn": tinyimagenet_resnet.resnet34_nobn,
+        "resnet50-nobn": tinyimagenet_resnet.resnet50_nobn,
+        "resnet101-nobn": tinyimagenet_resnet.resnet101_nobn,
+        "resnet152-nobn": tinyimagenet_resnet.resnet152_nobn,
+        "wide-resnet18-nobn": tinyimagenet_resnet.wide_resnet18_nobn,
+        "wide-resnet34-nobn": tinyimagenet_resnet.wide_resnet34_nobn,
+        "wide-resnet50-nobn": tinyimagenet_resnet.wide_resnet50_nobn,
+        "wide-resnet101-nobn": tinyimagenet_resnet.wide_resnet101_nobn,
+        "wide-resnet152-nobn": tinyimagenet_resnet.wide_resnet152_nobn,
     }
     imagenet_models = {
         "vgg11": imagenet_vgg.vgg11,

@@ -258,7 +258,7 @@ if __name__ == "__main__":
         "--tk-steps-file",
         type=str,
         default=None,
-        help="File to read the checkpointins steps from. Will override step_freq",
+        help="File to read the checkpoints steps from. Will override step_freq",
     )
     ## Experiment Hyperparameters ##
     parser.add_argument(
@@ -274,6 +274,7 @@ if __name__ == "__main__":
             "imp-conservation",
             "schedule-conservation",
             "tk",
+            "deep-dynamics"
         ],
         help="experiment name (default: example)",
     )
@@ -350,4 +351,6 @@ if __name__ == "__main__":
     if args.experiment == "schedule-conservation":
         schedule_conservation.run(args)
     if args.experiment == "tk":
+        tk_checkpoints.run(args)
+    if args.experiment == "deep-dynamics":
         tk_checkpoints.run(args)

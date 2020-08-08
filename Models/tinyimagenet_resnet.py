@@ -26,8 +26,10 @@ class BasicBlock(nn.Module):
     # to distinct
     expansion = 1
 
-    def __init__(self, in_channels, out_channels, stride=1, base_width=64):
+    def __init__(self, in_channels, out_channels, stride=1, base_width=64, batch_norm=True):
         super().__init__()
+
+        self.batch_norm = batch_norm
 
         # residual function
         layer_list = [
@@ -86,8 +88,11 @@ class BottleNeck(nn.Module):
 
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, base_width=64):
+    def __init__(self, in_channels, out_channels, stride=1, base_width=64, batch_norm=True):
         super().__init__()
+
+        self.batch_norm = batch_norm
+
         width = int(out_channels * (base_width / 64.0))
         layer_list = [
             layers.Conv2d(in_channels, width, kernel_size=1, bias=False),
@@ -194,7 +199,7 @@ class ResNet(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layer_list = []
         for stride in strides:
-            layer_list.append(block(self.in_channels, out_channels, stride, base_width))
+            layer_list.append(block(self.in_channels, out_channels, stride, base_width, self.batch_norm))
             self.in_channels = out_channels * block.expansion
 
         return nn.Sequential(*layer_list)

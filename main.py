@@ -45,6 +45,7 @@ if __name__ == "__main__":
             "vgg19",
             "vgg19-bn",
             "resnet18",
+            "resnet18-nobn",
             "resnet20",
             "resnet32",
             "resnet34",

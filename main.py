@@ -6,6 +6,7 @@ from Experiments import example
 from Experiments import singleshot
 from Experiments import multishot
 from Experiments import tk_checkpoints
+from Experiments import tpu_checkpoints
 from Experiments.theory import unit_conservation
 from Experiments.theory import layer_conservation
 from Experiments.theory import imp_conservation
@@ -292,6 +293,9 @@ if __name__ == "__main__":
         "--gpu", type=int, default="0", help="number of GPU device to use (default: 0)"
     )
     parser.add_argument(
+        "--tpu", type=bool, default=False, help="Whether to use TPU training. Uses env variables to select device"
+    )
+    parser.add_argument(
         "--workers",
         type=int,
         default="4",
@@ -355,3 +359,8 @@ if __name__ == "__main__":
         tk_checkpoints.run(args)
     if args.experiment == "deep-dynamics":
         tk_checkpoints.run(args)
+    if args.experiment == "tpu":
+        # TODO: check: function might need to take a "rank" argument?
+        tpu_cores = 8
+        xmp.spawn(tpu_checkpoints.run, args=(args,), nprocs=tpu_cores,
+          start_method='fork')

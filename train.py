@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
+import torch_xla.core.xla_model as xm
+
 
 def checkpoint(
     model, optimizer, scheduler, epoch, curr_step, save_path, metric_dict={}
@@ -50,6 +52,66 @@ def train(
         if verbose & (batch_idx % log_interval == 0):
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} \t Step: {}".format(
+                    epoch,
+                    batch_idx * len(data),
+                    len(dataloader.dataset),
+                    100.0 * batch_idx / len(dataloader),
+                    train_loss.item(),
+                    curr_step,
+                )
+            )
+        # TODO: this is just to be able to save at any step (even mid-epoch)
+        #       it might make more sense to checkpoint only on epoch: makes
+        #       for a cleaner codebase and can include test metrics
+        # TODO: additionally, could integrate tfutils.DBInterface here
+        eval_dict = {"train_loss": train_loss.item()}
+        if save_path is not None and save_freq is not None:
+            if curr_step % save_freq == 0:
+                checkpoint(model, optimizer, scheduler, epoch, curr_step, save_path)
+        if save_path is not None and save_steps is not None:
+            if len(save_steps) > 0 and curr_step == save_steps[0]:
+                save_steps.pop(0)
+                checkpoint(
+                    model, optimizer, scheduler, epoch, curr_step, save_path, eval_dict
+                )
+
+    return total / len(dataloader.dataset)
+
+def tpu_train(
+    model,
+    loss,
+    optimizer,
+    scheduler,
+    dataloader,
+    device,
+    epoch,
+    verbose,
+    log_interval=10,
+    save_freq=100,
+    save_steps=None,
+    save_path=None,
+):
+    model.train()
+    tracker = xm.RateTracker()
+    total = 0
+    for batch_idx, (data, target) in enumerate(dataloader):
+        data, target = data.to(device), target.to(device)
+        curr_step = epoch * len(dataloader) + batch_idx
+        optimizer.zero_grad()
+        output = model(data)
+        train_loss = loss(output, target)
+        total += train_loss.item() * data.size(0)
+        train_loss.backward()
+        xm.optimizer_step(optimizer)
+        tracker.add(FLAGS['batch_size'])
+        if verbose & (batch_idx % log_interval == 0):
+            print(
+                "[xla:{}, rate: {:.2f}, global_rate: {:.2f}] ".format(
+                    xm.get_ordinal(),
+                    tracker.rate(),
+                    tracker.global_rate()
+                )
+                "\t Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} \t Step: {}".format(
                     epoch,
                     batch_idx * len(data),
                     len(dataloader.dataset),

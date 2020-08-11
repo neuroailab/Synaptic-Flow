@@ -12,10 +12,17 @@ from Models import imagenet_resnet
 from Pruners import pruners
 from Utils import custom_datasets
 
+# TPU
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
+SERIAL_EXEC = xmp.MpSerialExecutor()
 
-def device(gpu):
-    use_cuda = torch.cuda.is_available()
-    return torch.device(("cuda:" + str(gpu)) if use_cuda else "cpu")
+def device(gpu, tpu=False):
+    if not tpu:
+        use_cuda = torch.cuda.is_available()
+        return torch.device(("cuda:" + str(gpu)) if use_cuda else "cpu")
+    else:
+        return xm.xla_device()
 
 
 def dimension(dataset):
@@ -42,64 +49,72 @@ def get_transform(size, padding, mean, std, preprocess):
     return transforms.Compose(transform)
 
 
-def dataloader(dataset, batch_size, train, workers, length=None, datadir="Data"):
+def dataloader(dataset, batch_size, train, workers, length=None, datadir="Data", tpu=False):
     # Dataset
-    if dataset == "mnist":
-        mean, std = (0.1307,), (0.3081,)
-        transform = get_transform(
-            size=28, padding=0, mean=mean, std=std, preprocess=False
-        )
-        dataset = datasets.MNIST(
-            datadir, train=train, download=True, transform=transform
-        )
-    if dataset == "cifar10":
-        mean, std = (0.491, 0.482, 0.447), (0.247, 0.243, 0.262)
-        transform = get_transform(
-            size=32, padding=4, mean=mean, std=std, preprocess=train
-        )
-        dataset = datasets.CIFAR10(
-            datadir, train=train, download=True, transform=transform
-        )
-    if dataset == "cifar100":
-        mean, std = (0.507, 0.487, 0.441), (0.267, 0.256, 0.276)
-        transform = get_transform(
-            size=32, padding=4, mean=mean, std=std, preprocess=train
-        )
-        dataset = datasets.CIFAR100(
-            datadir, train=train, download=True, transform=transform
-        )
-    if dataset == "tiny-imagenet":
-        mean, std = (0.480, 0.448, 0.397), (0.276, 0.269, 0.282)
-        transform = get_transform(
-            size=64, padding=4, mean=mean, std=std, preprocess=train
-        )
-        dataset = custom_datasets.TINYIMAGENET(
-            datadir, train=train, download=True, transform=transform
-        )
-    if dataset == "imagenet":
-        mean, std = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
-        if train:
-            transform = transforms.Compose(
-                [
-                    transforms.RandomResizedCrop(224, scale=(0.2, 1.0)),
-                    transforms.RandomGrayscale(p=0.2),
-                    transforms.ColorJitter(0.4, 0.4, 0.4, 0.4),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ToTensor(),
-                    transforms.Normalize(mean, std),
-                ]
+    def get_dataset():
+        if dataset == "mnist":
+            mean, std = (0.1307,), (0.3081,)
+            transform = get_transform(
+                size=28, padding=0, mean=mean, std=std, preprocess=False
             )
-        else:
-            transform = transforms.Compose(
-                [
-                    transforms.Resize(256),
-                    transforms.CenterCrop(224),
-                    transforms.ToTensor(),
-                    transforms.Normalize(mean, std),
-                ]
+            dataset = datasets.MNIST(
+                datadir, train=train, download=True, transform=transform
             )
-        folder = f"{datadir}/imagenet_raw/{'train' if train else 'val'}"
-        dataset = datasets.ImageFolder(folder, transform=transform)
+        if dataset == "cifar10":
+            mean, std = (0.491, 0.482, 0.447), (0.247, 0.243, 0.262)
+            transform = get_transform(
+                size=32, padding=4, mean=mean, std=std, preprocess=train
+            )
+            dataset = datasets.CIFAR10(
+                datadir, train=train, download=True, transform=transform
+            )
+        if dataset == "cifar100":
+            mean, std = (0.507, 0.487, 0.441), (0.267, 0.256, 0.276)
+            transform = get_transform(
+                size=32, padding=4, mean=mean, std=std, preprocess=train
+            )
+            dataset = datasets.CIFAR100(
+                datadir, train=train, download=True, transform=transform
+            )
+        if dataset == "tiny-imagenet":
+            mean, std = (0.480, 0.448, 0.397), (0.276, 0.269, 0.282)
+            transform = get_transform(
+                size=64, padding=4, mean=mean, std=std, preprocess=train
+            )
+            dataset = custom_datasets.TINYIMAGENET(
+                datadir, train=train, download=True, transform=transform
+            )
+        if dataset == "imagenet":
+            mean, std = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+            if train:
+                transform = transforms.Compose(
+                    [
+                        transforms.RandomResizedCrop(224, scale=(0.2, 1.0)),
+                        transforms.RandomGrayscale(p=0.2),
+                        transforms.ColorJitter(0.4, 0.4, 0.4, 0.4),
+                        transforms.RandomHorizontalFlip(),
+                        transforms.ToTensor(),
+                        transforms.Normalize(mean, std),
+                    ]
+                )
+            else:
+                transform = transforms.Compose(
+                    [
+                        transforms.Resize(256),
+                        transforms.CenterCrop(224),
+                        transforms.ToTensor(),
+                        transforms.Normalize(mean, std),
+                    ]
+                )
+            folder = f"{datadir}/imagenet_raw/{'train' if train else 'val'}"
+            dataset = datasets.ImageFolder(folder, transform=transform)
+        return dataset
+
+    if not tpu:
+        dataset = get_dataset()
+    else:
+        # Avoid multiple processes fetching the data
+        dataset = SERIAL_EXEC.run(get_dataset)
 
     # Dataloader
     use_cuda = torch.cuda.is_available()
@@ -109,8 +124,21 @@ def dataloader(dataset, batch_size, train, workers, length=None, datadir="Data")
         indices = torch.randperm(len(dataset))[:length]
         dataset = torch.utils.data.Subset(dataset, indices)
 
+    sampler = None
+    if tpu:
+        sampler = torch.utils.data.distributed.DistributedSampler(
+            dataset,
+            num_replicas=xm.xrt_world_size(),
+            rank=xm.get_ordinal(),
+            shuffle=shuffle
+        )
+
     dataloader = torch.utils.data.DataLoader(
-        dataset=dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        sampler=sampler,
+         **kwargs
     )
 
     return dataloader

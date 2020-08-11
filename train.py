@@ -161,6 +161,8 @@ def eval(model, loss, dataloader, device, verbose):
                 average_loss, correct1, len(dataloader.dataset), accuracy1
             )
         )
+    # TODO: For tpu MP, might need to mesh_reduce the metrics?
+    # accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return average_loss, accuracy1, accuracy5
 
 
@@ -178,6 +180,11 @@ def train_eval_loop(
     save_steps=None,
     save_path=None,
 ):
+    if device.type == "xla":
+        print("Using TPU train function")
+        train_fn = tpu_train
+    else:
+        train_fn = train
     test_loss, accuracy1, accuracy5 = eval(model, loss, test_loader, device, verbose)
     metric_dict = {
         "train_loss": 0,
@@ -188,7 +195,7 @@ def train_eval_loop(
     checkpoint(model, optimizer, scheduler, 0, 0, save_path, metric_dict)
     rows = [[np.nan, test_loss, accuracy1, accuracy5]]
     for epoch in tqdm(range(epochs)):
-        train_loss = train(
+        train_loss = train_fn(
             model,
             loss,
             optimizer,

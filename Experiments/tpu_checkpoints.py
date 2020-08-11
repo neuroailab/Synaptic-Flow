@@ -55,7 +55,12 @@ def run(args):
         )
 
     if args.tpu:
-        model = xmp.MpModelWrapper(model)
+        # Model wrapper:
+        # For the MP approach: nothing
+        # For the DP approach: (this would also change how data is fed in train loop)
+        # model_parallel = dp.DataParallel(model, device_ids=devices)
+
+        # LR Rescale
         args.lr *= xm.xrt_world_size()
     model = model.to(device)
 
@@ -82,10 +87,18 @@ def run(args):
 
     ## Train ##
     if args.tpu:
-        train_loader = pl.ParallelLoader(train_loader, [device])
-        train_loader = train_loader.per_device_loader(device)
-        test_loader = pl.ParallelLoader(test_loader, [device])
-        test_loader = test_loader.per_device_loader(device)
+        # Two approaches to data loading MP and DP?
+        # MP: https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet.py
+        train_loader = pl.MpDeviceLoader(train_loader, device)
+        test_loader = pl.MpDeviceLoader(test_loader, device)
+        # DP: https://github.com/pytorch/xla/blob/master/test/test_train_imagenet.py
+        #   Do nothing
+        #
+        # From outdated colab notebooks in pytroch XLA:
+        # train_loader = pl.ParallelLoader(train_loader, [device])
+        # train_loader = train_loader.per_device_loader(device)
+        # test_loader = pl.ParallelLoader(test_loader, [device])
+        # test_loader = test_loader.per_device_loader(device)
 
     print("Training for {} epochs.".format(args.post_epochs))
     post_result = train_eval_loop(
@@ -109,7 +122,7 @@ def run(args):
         post_result.tail(1),
     ]
     train_result = pd.concat(frames, keys=["Init.", "Final"])
-    print("Train results:\n", train_result)
+    print("Train results:\n", train_result)1
 
     ## Save Results and Model ##
     if args.save:

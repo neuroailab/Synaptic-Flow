@@ -108,12 +108,12 @@ def tpu_train(
     tracker = xm.RateTracker()
     total = 0
     for batch_idx, (data, target) in enumerate(dataloader):
-        data, target = data.to(device), target.to(device)
+        #data, target = data.to(device), target.to(device)
         curr_step = epoch * num_batches + batch_idx
         optimizer.zero_grad()
         output = model(data)
         train_loss = loss(output, target)
-        total += train_loss.item() * data.size(0)
+        #total += train_loss.item() * data.size(0)
         train_loss.backward()
         xm.optimizer_step(optimizer)
         tracker.add(batch_size)
@@ -121,16 +121,17 @@ def tpu_train(
             print(
                 f"[xla:{xm.get_ordinal()}, rate: {tracker.rate():.2f}, global_rate: {tracker.global_rate():.2f}] "
                 f"\tTrain Epoch: {epoch} "
-                f"[{batch_idx*len(data)}/{len(dataloader.dataset)} "
-                f"({100.0*batch_idx/len(dataloader):.0f}%)]"
+                f"[{batch_idx*batch_size}/{dataset_size} "
+                f"({100.0*batch_idx/num_batches:.0f}%)]"
                 f"\tLoss: {train_loss.item():.6f}"
-                f"\t Step: {curr_step}"
+                f"\tStep: {curr_step}"
             )
         # TODO: this is just to be able to save at any step (even mid-epoch)
         #       it might make more sense to checkpoint only on epoch: makes
         #       for a cleaner codebase and can include test metrics
         # TODO: additionally, could integrate tfutils.DBInterface here
-        eval_dict = {"train_loss": train_loss.item()}
+        ##eval_dict = {"train_loss": train_loss.item()}
+        eval_dict = {}
         if save_path is not None and save_freq is not None:
             if curr_step % save_freq == 0:
                 checkpoint(model, optimizer, scheduler, epoch, curr_step, save_path, tpu=True)
@@ -180,7 +181,7 @@ def tpu_eval(model, loss, dataloader, device, verbose, **kwargs):
     total_samples = 0
     with torch.no_grad():
         for data, target in dataloader:
-            data, target = data.to(device), target.to(device)
+            #data, target = data.to(device), target.to(device)
             output = model(data)
             total += loss(output, target).item() * data.size(0)
             _, pred = output.topk(5, dim=1)

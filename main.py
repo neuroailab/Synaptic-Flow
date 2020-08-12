@@ -12,6 +12,9 @@ from Experiments.theory import layer_conservation
 from Experiments.theory import imp_conservation
 from Experiments.theory import schedule_conservation
 
+import torch_xla.distributed.xla_multiprocessing as xmp
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Network Compression")
@@ -276,7 +279,8 @@ if __name__ == "__main__":
             "imp-conservation",
             "schedule-conservation",
             "tk",
-            "deep-dynamics"
+            "deep-dynamics",
+            "tpu",
         ],
         help="experiment name (default: example)",
     )
@@ -341,6 +345,7 @@ if __name__ == "__main__":
             json.dump(args.__dict__, f, sort_keys=True, indent=4)
 
     ## Run Experiment ##
+    print(f"Running Experiment: {args.experiment}")
     if args.experiment == "example":
         example.run(args)
     if args.experiment == "singleshot":
@@ -362,5 +367,7 @@ if __name__ == "__main__":
     if args.experiment == "tpu":
         # TODO: check: function might need to take a "rank" argument?
         tpu_cores = 8
-        xmp.spawn(tpu_checkpoints.run, args=(args,), nprocs=tpu_cores,
+        def _mp_fn(rank, args):
+            tpu_checkpoints.run(args)
+        xmp.spawn(_mp_fn, args=(args,), nprocs=tpu_cores,
           start_method='fork')

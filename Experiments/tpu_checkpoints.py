@@ -12,12 +12,16 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 def run(args):
+    if args.tpu:
+        print_fn = xm.master_print
+    else:
+        print_fn = print
     ## Random Seed and Device ##
-    torch.manual_seed(args.seed)
-      = load.device(args.gpu, tpu=args.tpu)
+    torch.manual_seed(args.seed) 
+    device = load.device(args.gpu, tpu=args.tpu)
 
     ## Data ##
-    print("Loading {} dataset.".format(args.dataset))
+    print_fn("Loading {} dataset.".format(args.dataset))
     input_shape, num_classes = load.dimension(args.dataset)
     train_loader = load.dataloader(
         dataset=args.dataset,
@@ -35,10 +39,10 @@ def run(args):
     )
 
     ## Model, Loss, Optimizer ##
-    print("Creating {}-{} model.".format(args.model_class, args.model))
+    print_fn("Creating {}-{} model.".format(args.model_class, args.model))
     if args.model in ["fc", "conv"]:
         norm_layer = load.norm_layer(args.norm_layer)
-        print(f"Applying {args.norm_layer} normalization: {norm_layer}")
+        print_fn(f"Applying {args.norm_layer} normalization: {norm_layer}")
         model = load.model(args.model, args.model_class)(
             input_shape=input_shape,
             num_classes=num_classes,
@@ -81,26 +85,31 @@ def run(args):
     save_steps = load.save_steps_file(args.tk_steps_file)
     steps_per_epoch = len(train_loader)
     max_epochs = int(save_steps[-1] / steps_per_epoch)
-    print(f"Overriding post_epochs to last step in file ")
-    print(f"    post_epochs set to {max_epochs}")
+    print_fn(f"Overriding post_epochs to last step in file ")
+    print_fn(f"    post_epochs set to {max_epochs}")
     setattr(args, "post_epochs", max_epochs)
 
     ## Train ##
     if args.tpu:
         # Two approaches to data loading MP and DP?
         # MP: https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet.py
-        train_loader = pl.MpDeviceLoader(train_loader, device)
-        test_loader = pl.MpDeviceLoader(test_loader, device)
+        #train_loader = pl.MpDeviceLoader(train_loader, device)
+        #test_loader = pl.MpDeviceLoader(test_loader, device)
         # DP: https://github.com/pytorch/xla/blob/master/test/test_train_imagenet.py
         #   Do nothing
         #
-        # From outdated colab notebooks in pytroch XLA:
-        # train_loader = pl.ParallelLoader(train_loader, [device])
-        # train_loader = train_loader.per_device_loader(device)
-        # test_loader = pl.ParallelLoader(test_loader, [device])
-        # test_loader = test_loader.per_device_loader(device)
+        # For torch_xla == 1.5
+        train_kwargs = {
+            "batch_size": train_loader.batch_size,
+            "dataset_size": len(train_loader.dataset),
+            "num_batches": len(train_loader)
+        }
+        #train_loader = pl.ParallelLoader(train_loader, [device])
+        #train_loader = train_loader.per_device_loader(device)
+        #test_loader = pl.ParallelLoader(test_loader, [device])
+        #test_loader = test_loader.per_device_loader(device)
 
-    print("Training for {} epochs.".format(args.post_epochs))
+    print_fn("Training for {} epochs.".format(args.post_epochs))
     post_result = train_eval_loop(
         model,
         loss,
@@ -114,6 +123,7 @@ def run(args):
         save_steps=save_steps,
         save_freq=args.save_freq,
         save_path=args.save_path,
+        **train_kwargs
     )
 
     ## Display Results ##
@@ -122,11 +132,11 @@ def run(args):
         post_result.tail(1),
     ]
     train_result = pd.concat(frames, keys=["Init.", "Final"])
-    print("Train results:\n", train_result)1
+    print_fn("Train results:\n", train_result)
 
     ## Save Results and Model ##
     if args.save:
-        print("Saving results.")
+        print_fn("Saving results.")
         post_result.to_pickle("{}/post-train.pkl".format(args.result_dir))
         torch.save(model.state_dict(), "{}/model.pt".format(args.result_dir))
         torch.save(optimizer.state_dict(), "{}/optimizer.pt".format(args.result_dir))

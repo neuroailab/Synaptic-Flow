@@ -103,7 +103,7 @@ def tpu_train(
     batch_size = kwargs.get("batch_size")
     num_batches = kwargs.get("num_batches")
     dataset_size = kwargs.get("dataset_size")
-    
+
     model.train()
     tracker = xm.RateTracker()
     total = 0
@@ -119,8 +119,12 @@ def tpu_train(
         tracker.add(batch_size)
         if verbose & (batch_idx % log_interval == 0):
             print(
-                f"[xla:{xm.get_ordinal()}, rate: {tracker.rate():.2f}, global_rate: {tracker.global_rate():.2f}] " \
-                #f"\t Train Epoch: {epoch} [{batch_idx*len(data)}/{len(dataloader.dataset} ({100.0*batch_idx/len(dataloader):.0f}%)]\tLoss: {train_loss.item():.6f} \t Step: {curr_step}"
+                f"[xla:{xm.get_ordinal()}, rate: {tracker.rate():.2f}, global_rate: {tracker.global_rate():.2f}] "
+                f"\tTrain Epoch: {epoch} "
+                f"[{batch_idx*len(data)}/{len(dataloader.dataset)} "
+                f"({100.0*batch_idx/len(dataloader):.0f}%)]"
+                f"\tLoss: {train_loss.item():.6f}"
+                f"\t Step: {curr_step}"
             )
         # TODO: this is just to be able to save at any step (even mid-epoch)
         #       it might make more sense to checkpoint only on epoch: makes

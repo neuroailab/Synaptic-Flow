@@ -72,7 +72,7 @@ class VGG(nn.Module):
         if dense_classifier:
             self.Linear = nn.Linear
 
-        dim = 512 * 4
+        dim = 512 * 1 # TODO: this quantity is data dependent
 
         self.classifier = nn.Sequential(
             self.Linear(dim, dim // 2),

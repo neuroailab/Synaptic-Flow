@@ -47,6 +47,7 @@ def train(
         total += train_loss.item() * data.size(0)
         train_loss.backward()
         optimizer.step()
+        curr_step += 1
         if verbose & (batch_idx % log_interval == 0):
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f} \t Step: {}".format(

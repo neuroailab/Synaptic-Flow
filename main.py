@@ -353,5 +353,5 @@ if __name__ == "__main__":
         schedule_conservation.run(args)
     if args.experiment == "tk":
         tk_checkpoints.run(args)
-    if args.experiment == "deep-dynamics":
+    if "deep-dynamics" in args.experiment:
         tk_checkpoints.run(args)

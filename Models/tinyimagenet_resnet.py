@@ -26,7 +26,9 @@ class BasicBlock(nn.Module):
     # to distinct
     expansion = 1
 
-    def __init__(self, in_channels, out_channels, stride=1, base_width=64, batch_norm=True):
+    def __init__(
+        self, in_channels, out_channels, stride=1, base_width=64, batch_norm=True
+    ):
         super().__init__()
 
         self.batch_norm = batch_norm
@@ -43,7 +45,7 @@ class BasicBlock(nn.Module):
             ),
         ]
         if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(out_channels))
+            layer_list.append(layers.BatchNorm2d(out_channels))
         layer_list += [
             nn.ReLU(inplace=True),
             layers.Conv2d(
@@ -55,7 +57,7 @@ class BasicBlock(nn.Module):
             ),
         ]
         if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(out_channels * BasicBlock.expansion))
+            layer_list.append(layers.BatchNorm2d(out_channels * BasicBlock.expansion))
         self.residual_function = nn.Sequential(*layer_list)
 
         # shortcut
@@ -74,7 +76,9 @@ class BasicBlock(nn.Module):
                 )
             ]
             if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(out_channels * BasicBlock.expansion))
+                layer_list.append(
+                    layers.BatchNorm2d(out_channels * BasicBlock.expansion)
+                )
             self.shortcut = nn.Sequential(*layer_list)
 
     def forward(self, x):
@@ -88,7 +92,9 @@ class BottleNeck(nn.Module):
 
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, base_width=64, batch_norm=True):
+    def __init__(
+        self, in_channels, out_channels, stride=1, base_width=64, batch_norm=True
+    ):
         super().__init__()
 
         self.batch_norm = batch_norm
@@ -98,7 +104,7 @@ class BottleNeck(nn.Module):
             layers.Conv2d(in_channels, width, kernel_size=1, bias=False),
         ]
         if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(width))
+            layer_list.append(layers.BatchNorm2d(width))
         layer_list += [
             nn.ReLU(inplace=True),
             layers.Conv2d(
@@ -106,7 +112,7 @@ class BottleNeck(nn.Module):
             ),
         ]
         if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(width))
+            layer_list.append(layers.BatchNorm2d(width))
         layer_list += [
             nn.ReLU(inplace=True),
             layers.Conv2d(
@@ -114,7 +120,7 @@ class BottleNeck(nn.Module):
             ),
         ]
         if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(out_channels * BottleNeck.expansion))
+            layer_list.append(layers.BatchNorm2d(out_channels * BottleNeck.expansion))
         self.residual_function = nn.Sequential(*layer_list)
 
         self.shortcut = layers.Identity2d(in_channels)
@@ -128,10 +134,11 @@ class BottleNeck(nn.Module):
                     kernel_size=1,
                     bias=False,
                 ),
-
             ]
             if self.batch_norm:
-                layer_list.append(layers.BatchNorm2d(out_channels * BottleNeck.expansion))
+                layer_list.append(
+                    layers.BatchNorm2d(out_channels * BottleNeck.expansion)
+                )
             self.shortcut = nn.Sequential(*layer_list)
 
     def forward(self, x):
@@ -140,7 +147,13 @@ class BottleNeck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(
-        self, block, num_block, base_width, num_classes=200, dense_classifier=False, batch_norm=True,
+        self,
+        block,
+        num_block,
+        base_width,
+        num_classes=200,
+        dense_classifier=False,
+        batch_norm=True,
     ):
         super().__init__()
 
@@ -199,7 +212,11 @@ class ResNet(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layer_list = []
         for stride in strides:
-            layer_list.append(block(self.in_channels, out_channels, stride, base_width, self.batch_norm))
+            layer_list.append(
+                block(
+                    self.in_channels, out_channels, stride, base_width, self.batch_norm
+                )
+            )
             self.in_channels = out_channels * block.expansion
 
         return nn.Sequential(*layer_list)
@@ -218,9 +235,18 @@ class ResNet(nn.Module):
 
 
 def _resnet(
-    arch, block, num_block, base_width, num_classes, dense_classifier, pretrained, batch_norm
+    arch,
+    block,
+    num_block,
+    base_width,
+    num_classes,
+    dense_classifier,
+    pretrained,
+    batch_norm,
 ):
-    model = ResNet(block, num_block, base_width, num_classes, dense_classifier, batch_norm)
+    model = ResNet(
+        block, num_block, base_width, num_classes, dense_classifier, batch_norm
+    )
     if pretrained:
         pretrained_path = "Models/pretrained/{}-cifar{}.pt".format(arch, num_classes)
         pretrained_dict = torch.load(pretrained_path)
@@ -455,7 +481,9 @@ def resnet152_nobn(input_shape, num_classes, dense_classifier=False, pretrained=
     )
 
 
-def wide_resnet18_nobn(input_shape, num_classes, dense_classifier=False, pretrained=False):
+def wide_resnet18_nobn(
+    input_shape, num_classes, dense_classifier=False, pretrained=False
+):
     """ return a ResNet 18 object
     """
     return _resnet(
@@ -470,7 +498,9 @@ def wide_resnet18_nobn(input_shape, num_classes, dense_classifier=False, pretrai
     )
 
 
-def wide_resnet34_nobn(input_shape, num_classes, dense_classifier=False, pretrained=False):
+def wide_resnet34_nobn(
+    input_shape, num_classes, dense_classifier=False, pretrained=False
+):
     """ return a ResNet 34 object
     """
     return _resnet(
@@ -485,7 +515,9 @@ def wide_resnet34_nobn(input_shape, num_classes, dense_classifier=False, pretrai
     )
 
 
-def wide_resnet50_nobn(input_shape, num_classes, dense_classifier=False, pretrained=False):
+def wide_resnet50_nobn(
+    input_shape, num_classes, dense_classifier=False, pretrained=False
+):
     """ return a ResNet 50 object
     """
     return _resnet(
@@ -500,7 +532,9 @@ def wide_resnet50_nobn(input_shape, num_classes, dense_classifier=False, pretrai
     )
 
 
-def wide_resnet101_nobn(input_shape, num_classes, dense_classifier=False, pretrained=False):
+def wide_resnet101_nobn(
+    input_shape, num_classes, dense_classifier=False, pretrained=False
+):
     """ return a ResNet 101 object
     """
     return _resnet(
@@ -515,7 +549,9 @@ def wide_resnet101_nobn(input_shape, num_classes, dense_classifier=False, pretra
     )
 
 
-def wide_resnet152_nobn(input_shape, num_classes, dense_classifier=False, pretrained=False):
+def wide_resnet152_nobn(
+    input_shape, num_classes, dense_classifier=False, pretrained=False
+):
     """ return a ResNet 152 object
     """
     return _resnet(

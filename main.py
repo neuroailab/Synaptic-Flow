@@ -275,7 +275,7 @@ if __name__ == "__main__":
             "imp-conservation",
             "schedule-conservation",
             "tk",
-            "deep-dynamics"
+            "deep-dynamics",
         ],
         help="experiment name (default: example)",
     )
